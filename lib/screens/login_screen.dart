@@ -1,6 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:rounded_loading_button/rounded_loading_button.dart';
+import 'package:spotify_clone/provider/internet_provider.dart';
+import 'package:spotify_clone/provider/sign_in_provider.dart';
+import 'package:spotify_clone/screens/home_screen.dart';
 import 'package:spotify_clone/utils/config.dart';
+import 'package:spotify_clone/utils/next_screen.dart';
+import 'package:spotify_clone/utils/snack_bar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.white,
                       successColor: Colors.white,
                       controller: _googleController,
-                      onPressed: () {},
+                      onPressed: _googleSignIn,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -122,173 +129,63 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  // handling google sign in
+  Future<void> _googleSignIn() async {
+    final signProvider = context.read<SignInProvider>();
+    final internetProvider = context.read<InternetProvider>();
+    await internetProvider.checkInternetConnection();
+    if (internetProvider.hasInternet == false) {
+      openSnackBar(context, "Check your InternetProvider ", Colors.red);
+      _googleController.reset();
+      _facebookController.reset();
+    } else {
+      await signProvider.googleSignInWithGoogle().then(
+        (value) {
+          if (signProvider.hasError) {
+            openSnackBar(context, signProvider.errorCode!, Colors.red);
+            _googleController.reset();
+          } else {
+            // check weather user exist or not
+            signProvider.checkUserExist().then(
+              (value) async {
+                if (value == true) {
+                  await signProvider
+                      .getUserDataFromFireStore(signProvider.uid)
+                      .then(
+                        (value) =>
+                            signProvider.saveDatatoSharedPreferrences().then(
+                                  (value) =>
+                                      signProvider.setSignIn().then((value) {
+                                    _googleController.success();
+                                    handleAfterSignIn();
+                                  }),
+                                ),
+                      );
+                } else {
+                  signProvider.saveDataInFireStore().then(
+                        (value) =>
+                            signProvider.saveDatatoSharedPreferrences().then(
+                                  (value) => signProvider.setSignIn().then(
+                                    (value) {
+                                      _googleController.success();
+                                      handleAfterSignIn();
+                                    },
+                                  ),
+                                ),
+                      );
+                }
+              },
+            );
+          }
+        },
+      );
+    }
+  }
+
+  void handleAfterSignIn() {
+    Future.delayed(const Duration(milliseconds: 1000)).then((value) {
+      nextScreenReplace(context, const Homescreen());
+    });
+  }
 }
-  
-            // Column(
-            //   crossAxisAlignment: CrossAxisAlignment.center,
-            //   mainAxisAlignment: MainAxisAlignment.center,
-            //   children: [
-            //     Padding(
-            //       padding: const EdgeInsets.only(left: 14, right: 14),
-            //       child: RoundedLoadingButton(
-            //         borderRadius: 25,
-            //         width: MediaQuery.of(context).size.width * 08,
-            //         color: Colors.white,
-            //         successColor: Colors.white,
-            //         controller: _googleController,
-            //         onPressed: () {},
-            //         child: const Row(
-            //           mainAxisAlignment: MainAxisAlignment.center,
-            //           children: [
-            //             CircleAvatar(
-            //               radius: 15,
-            //               backgroundColor: Colors.white,
-            //               backgroundImage: AssetImage(Config.google_icon),
-            //             ),
-            //             SizedBox(
-            //               width: 15,
-            //             ),
-            //             Text(
-            //               textAlign: TextAlign.center,
-            //               "Sign in with Google",
-            //               style: TextStyle(color: Colors.black),
-            //             ),
-            //           ],
-            //         ),
-            //       ),
-            //     ),
-            //     const SizedBox(
-            //       height: 16,
-            //     ),
-            //     Padding(
-            //       padding: const EdgeInsets.only(
-            //         left: 14,
-            //         right: 14,
-            //       ),
-            //       child: RoundedLoadingButton(
-            //         borderRadius: 25,
-            //         width: MediaQuery.of(context).size.width * 08,
-            //         color: Colors.white,
-            //         successColor: Colors.white,
-            //         controller: _facebookController,
-            //         onPressed: () {},
-            //         child: const Row(
-            //           mainAxisAlignment: MainAxisAlignment.center,
-            //           children: [
-            //             CircleAvatar(
-            //               radius: 15,
-            //               backgroundColor: Colors.white,
-            //               backgroundImage: AssetImage(Config.facebook_icon),
-            //             ),
-            //             SizedBox(
-            //               width: 15,
-            //             ),
-            //             Text(
-            //               textAlign: TextAlign.center,
-            //               "Sign in with Facebook",
-            //               style: TextStyle(color: Colors.black),
-            //             ),
-            //           ],
-            //         ),
-            //       ),
-            //     ),
-            //   ],
-            // )
-    // var _userMail = '';
-  // var _userUsername = '';
-
-//   final _key = GlobalKey<FormState>();
-//   void _saveUser() {
-//     final isValid = _key.currentState!.validate();
-//     if (!isValid) {
-//       return;
-//     }
-//     _key.currentState!.save();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Theme.of(context).colorScheme.onBackground,
-//       appBar: AppBar(
-//         backgroundColor: Theme.of(context).colorScheme.onPrimary,
-//         elevation: 0,
-//       ),
-//       body: Center(
-//         child: Container(
-//           decoration: BoxDecoration(borderRadius: BorderRadius.circular(24)),
-//           width: 300,
-//           child: Form(
-//             key: _key,
-//             child: Column(
-//               mainAxisAlignment: MainAxisAlignment.center,
-//               children: [
-//                 TextFormField(
-//                   keyboardType: TextInputType.emailAddress,
-//                   validator: (value) {
-//                     if (value == null ||
-//                         value.isEmpty ||
-//                         !value.contains('@')) {
-//                       return "Please provide a valid mail ";
-//                     }
-//                     return null;
-//                   },
-//                   onSaved: (newValue) {
-//                     _userMail = newValue!;
-//                   },
-//                   decoration: const InputDecoration(
-//                     labelText: 'email',
-//                     border: OutlineInputBorder(
-//                       borderRadius: BorderRadius.all(
-//                         Radius.circular(24),
-//                       ),
-//                     ),
-//                   ),
-//                 ),
-//                 const SizedBox(
-//                   height: 14,
-//                 ),
-//                 TextFormField(
-//                   keyboardType: TextInputType.emailAddress,
-//                   validator: (value) {
-//                     if (value == null ||
-//                         value.isEmpty ||
-//                         value.trim().length < 5) {
-//                       return "Please provide a valid  Username";
-//                     }
-//                     return null;
-//                   },
-//                   onSaved: (newValue) {
-//                     _userUsername = newValue!;
-//                   },
-//                   decoration: const InputDecoration(
-//                     labelText: 'Username',
-//                     border: OutlineInputBorder(
-//                       borderRadius: BorderRadius.all(
-//                         Radius.circular(24),
-//                       ),
-//                     ),
-//                   ),
-//                 ),
-//                 const SizedBox(
-//                   height: 14,
-//                 ),
-//                 ElevatedButton(
-//                   onPressed: _saveUser,
-//                   style: ElevatedButton.styleFrom(
-//                     backgroundColor: const Color.fromARGB(253, 31, 241, 104),
-//                     shape: const StadiumBorder(),
-//                   ),
-//                   child: const Text(
-//                     "   Log in   ",
-//                     style: TextStyle(color: Colors.black, fontFamily: 'Gotham'),
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }

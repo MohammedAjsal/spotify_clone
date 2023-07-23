@@ -6,6 +6,7 @@ import 'package:spotify_clone/screens/home_screen.dart';
 import 'package:spotify_clone/screens/login_screen.dart';
 import 'package:spotify_clone/utils/config.dart';
 import 'package:provider/provider.dart';
+import 'package:spotify_clone/utils/next_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,15 +25,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Timer(const Duration(seconds: 3), () {
       signProvider.isSignedIn == false
-          ? Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (ctx) => const LoginScreen(),
-              ),
+          ? nextScreen(
+              context,
+              const LoginScreen(),
             )
-          : Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (ctx) => const Homescreen(),
-              ),
+          : nextScreen(
+              context,
+              const Homescreen(),
             );
     });
   }

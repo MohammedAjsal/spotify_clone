@@ -1,5 +1,7 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:spotify_clone/provider/internet_provider.dart';
 import 'package:spotify_clone/provider/sign_in_provider.dart';
 import 'package:spotify_clone/screens/spalsh_screen.dart';
 
@@ -12,7 +14,9 @@ final theme = ThemeData().copyWith(
   useMaterial3: false,
   colorScheme: color,
 );
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -24,6 +28,9 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (context) => SignInProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => InternetProvider(),
         ),
       ],
       child: const MaterialApp(
