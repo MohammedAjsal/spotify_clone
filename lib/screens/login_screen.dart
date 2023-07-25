@@ -18,8 +18,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  final _googleController = RoundedLoadingButtonController();
-  final _facebookController = RoundedLoadingButtonController();
+  final RoundedLoadingButtonController _googleController =
+      RoundedLoadingButtonController();
+  final RoundedLoadingButtonController _facebookController =
+      RoundedLoadingButtonController();
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.white,
                       successColor: Colors.white,
                       controller: _googleController,
-                      onPressed: _googleSignIn,
+                      onPressed: handleGoogleSignIn,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -131,48 +133,41 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // handling google sign in
-  Future<void> _googleSignIn() async {
-    final signProvider = context.read<SignInProvider>();
-    final internetProvider = context.read<InternetProvider>();
-    await internetProvider.checkInternetConnection();
-    if (internetProvider.hasInternet == false) {
-      openSnackBar(context, "Check your InternetProvider ", Colors.red);
+  Future handleGoogleSignIn() async {
+    final sp = context.read<SignInProvider>();
+    final ip = context.read<InternetProvider>();
+    await ip.checkInternetConnection();
+
+    if (ip.hasInternet == false) {
+      openSnackBar(context, "Check your Internet connection", Colors.red);
       _googleController.reset();
-      _facebookController.reset();
     } else {
-      await signProvider.googleSignInWithGoogle().then(
+      await sp.signInWithGoogle().then(
         (value) {
-          if (signProvider.hasError) {
-            openSnackBar(context, signProvider.errorCode!, Colors.red);
+          if (sp.hasError == true) {
+            openSnackBar(context, sp.errorCode.toString(), Colors.red);
             _googleController.reset();
           } else {
-            // check weather user exist or not
-            signProvider.checkUserExist().then(
+            // checking whether user exists or not
+            sp.checkUserExist().then(
               (value) async {
                 if (value == true) {
-                  await signProvider
-                      .getUserDataFromFireStore(signProvider.uid)
-                      .then(
-                        (value) =>
-                            signProvider.saveDatatoSharedPreferrences().then(
-                                  (value) =>
-                                      signProvider.setSignIn().then((value) {
-                                    _googleController.success();
-                                    handleAfterSignIn();
-                                  }),
-                                ),
-                      );
+                  // user exists
+                  await sp.getUserDataFromFireStore(sp.uid).then((value) => sp
+                      .saveDataToSharedPreferrences()
+                      .then((value) => sp.setSignIn().then((value) {
+                            _googleController.success();
+                            handleAfterSignIn();
+                          })));
                 } else {
-                  signProvider.saveDataInFireStore().then(
-                        (value) =>
-                            signProvider.saveDatatoSharedPreferrences().then(
-                                  (value) => signProvider.setSignIn().then(
-                                    (value) {
-                                      _googleController.success();
-                                      handleAfterSignIn();
-                                    },
-                                  ),
-                                ),
+                  // user does not exist
+                  sp.saveDataInFireStore().then(
+                        (value) => sp.saveDataToSharedPreferrences().then(
+                              (value) => sp.setSignIn().then((value) {
+                                _googleController.success();
+                                handleAfterSignIn();
+                              }),
+                            ),
                       );
                 }
               },
